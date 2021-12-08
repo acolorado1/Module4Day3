@@ -4,11 +4,11 @@
 
 OptimizeGeneNetworks is a script that takes .gmt formatted file and a STRING database file and generates three types of 
 files and histograms of network scores per generation. The first of the three files is one that shows summary statistics
-of the genetic algorithm used to create highly connected subnetworks of disease associated genes. The genetic algroithm 
-also outputs the histograms as a visual summary of each generation. The second file type is a .sif file for the top 10 
+of the genetic algorithm used to create highly connected subnetworks of disease associated genes. The genetic algorithm 
+also outputs the histograms as a visual summary of each generation. The second file type is a network text file for the top 10 
 highest scoring disease associated subnetworks wherein the nodes and edge weights are specified and can be then visualized
 in Cytoscape. The third output file is a rewritten .gmt file and the only difference between this one and the original 
-is that each gene is given a score.
+is that each gene is given a score.   
 
 ## Workflow
 
@@ -113,7 +113,7 @@ Selection score's variance: 1.084485768769754
 ...
 ```
 
-Example of SIF file formatting:
+Example of network text file formatting:
 
 ```text
 PLK1	RP11-298P3.4	0.807000
@@ -148,19 +148,23 @@ Fanconi anemia locus 4	Locus for FANCA	DBNDD1 NA	AC133919.6 0	RP11-356C4.2 NA	MC
 ...
 ```
 
-Example of Genetic algorithm histogram: 
+Example of genetic algorithm histogram: 
 
 ![Image of histogram example](https://github.com/acolorado1/Module4Day3/blob/1e1a56674ce582d4363ac421c76a7e70b3b92dcf/Module4Day3_hist_example.png)
 
 ### Visualization 
-Visualization was done in Cytoscape. The following is the visualization of the example SIF file: 
+Visualization was done in Cytoscape. Note, when importing the network into Cytoscape as it is a text file one will have
+to click Selct Network, then click column 1 and select source node, then click column 2 and select target node, and 
+click column 3 and select edge attribute. 
+
+The following is the visualization of the example network text file: 
 
 ![Image of subnetwork example]()
 
 ## Installation and Dependencies
 You must have Python 3 installed. Any Python 3 version should work but it was written in Python 3.9 using a Windows-based 
-operating system. Packages random, argparse 1.4.0, and the function mean from the statistics package will need to be 
-installed. 
+operating system. Packages random, argparse 1.4.0, the functions mean, stdev, and variance from the statistics package, 
+and matplotlib 3.5.0 will need to be installed. 
 
 ## Contact 
 Angela Sofia Burkhart Colorado - angelasofia.burkhartcolorado@cuanschutz.edu
