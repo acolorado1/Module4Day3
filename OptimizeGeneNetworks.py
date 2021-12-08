@@ -10,14 +10,36 @@ STRING_filepath = "C:\\Users\\ascol\\OneDrive\\Desktop\\7711\\Module4Day3\\STRIN
 import argparse as arg
 import random
 import scipy.stats as stats
+import numpy as np
 from statistics import mean, stdev, variance
 from matplotlib import pyplot as plt
 
 '''
-argparse parameters n stuff
+Added four arguments to parser: 
+1. --gmt parameter that takes loci and genes at loci file path as a string
+2. --sdb parameter that takes string database file path as a string
+3. --ps parameter is population size as an integer 
+4. --nb parameter is the number of bins as an integer 
+5. --np parameter is the number of populations as an integer 
 '''
+parser = arg.ArgumentParser(description="Uses a genetic algorithm to create highly connected disease networks and "
+                                        "outputs three kinds of files of the results, and displays frequency plots.")
+parser.add_argument("--gmt", "-gmt_formated_file", type=str, help="experimental loci file path (default Input.gmt.txt)",
+                    default="Input.gmt.txt")
+parser.add_argument("--sdb", "-string_database", type=str, help="gene interaction file path (default STRING.txt)",
+                    default="STRING.txt")
+parser.add_argument("--ps", "-pop_size", type=int, help="size of a population of subnetworks",
+                    default=5000)
+parser.add_argument("--nb", "-n_bins", type=int, help="number of bins wanted to create noninformative loci",
+                    default=128)
+parser.add_argument("--np", "-n_pops", type=int, help="number of populations wanted",
+                    default=1000)
 
-#define parser here
+
+args = parser.parse_args()
+
+#choose seed
+random.seed(144)
 
 '''
 Takes .gmt formatted file and creates a dictionary of loci and the genes found in them. 
@@ -216,7 +238,7 @@ create more connected subnetworks, this will also return a GA algorithm statisti
 @returns: optimized subnets (list of 5000 FA associated subnetworks), writes a file with GA stats and outputs histograms
         of the score distributions. 
 '''
-def GA_mating(FA_popsubnets, gene_interaction_dict, loci_gene_dict, GAstatsfilepath):
+def GA_mating(FA_popsubnets, gene_interaction_dict, loci_gene_dict):
     gen = 0
     mean_density = 0
     new_density = 0
@@ -252,7 +274,7 @@ def GA_mating(FA_popsubnets, gene_interaction_dict, loci_gene_dict, GAstatsfilep
         new_density = mean(selection_scores(optimized_subnets, gene_interaction_dict))
         gen += 1
 
-    GAstatsfile = open(GAstatsfilepath, 'w+')
+    GAstatsfile = open("GeneticAlgorithmStats.txt", 'w+')
     for loci in GA_stats:
         ga_mean = str(GA_stats[loci][1])
         ga_sd = str(GA_stats[loci][2])
@@ -262,6 +284,7 @@ def GA_mating(FA_popsubnets, gene_interaction_dict, loci_gene_dict, GAstatsfilep
                         "Selection score's variance: " + ga_var + '\n\n'
         GAstatsfile.write(row)
     GAstatsfile.close()
+
     return optimized_subnets
 
 '''
@@ -303,8 +326,13 @@ created by noninformative loci.
 @returns: list of p-values of length FA_popsubnets 
 '''
 # TODO
-def p_val (optimized_subnets, mean_pops):
-    return None
+def p_val (optimized_subnets, noninf_pop_mean):
+    print(len(noninf_pop_mean))
+    print(noninf_pop_mean[:5])
+    print(len(optimized_subnets))
+    print(optimized_subnets[:5])
+
+    #gT = np.abs(np.average(feat_vir[:, 0]) — np.average(feat_ver[:, 0]))
 
 '''
 gene_scores calculates a score for each FA associated gene which is the sum of the number of weighted edges in each 
@@ -349,7 +377,7 @@ newgmt_withscores takes the format of the old gmt file and adds gene scores to e
 @param newgmtfile: file path of the updated .gmt file that will be written in the current working directory 
 @returns: Nothing, but outputs a file 
 '''
-def newgmt_withscores (gmtfile, loci_gene_dict, gene_score, newgmtfile):
+def newgmt_withscores (gmtfile, loci_gene_dict, gene_score):
     old_f = open(gmtfile, "r")
     locusname_description = {}
     loci = 0
@@ -358,7 +386,7 @@ def newgmt_withscores (gmtfile, loci_gene_dict, gene_score, newgmtfile):
         locusname_description[loci] = line_list[0:2]
         loci += 1
     old_f.close()
-    new_gmt = open(newgmtfile, 'w+')
+    new_gmt = open('Day3_Output.gmt', 'w+')
     for key in loci_gene_dict:
         gene_list = []
         for gene in loci_gene_dict[key]:
@@ -373,39 +401,51 @@ def newgmt_withscores (gmtfile, loci_gene_dict, gene_score, newgmtfile):
 
 
 '''
-creates sif files of subnetworks with the top ten selection scores
+subnetwrok_vis creates 10 sif files of the top 10 highest scoring subnetworks after the genetic algorithm has run. 
+
+@param optimized_subnets: a list of 5000 FA associated subnetworks 
+@param gene_interactions_dict: a dictionary of genes (keys) with dictionary values of connected genes and the weight of
+            their interaction 
+@returns: nothing but writes 10 .sif files 
 '''
-# TODO
-def subnetwork_vis(optimized_subnets, gene_interactions_dict,):
+def subnetwork_vis(optimized_subnets, gene_interactions_dict):
     sel_scores = selection_scores(optimized_subnets, gene_interactions_dict)
     sorted_scores = sorted(sel_scores)
     top_10_scores = sorted_scores[-10:]
-    print(len(top_10_scores))
     top_10_subnetworks = {}
+    extra = 0
     for index in range(len(sel_scores)):
         if sel_scores[index] in top_10_scores:
-            duplicate += 0
-            if sel_scores[index] not in top_10_subnetworks:
-                top_10_subnetworks[sel_scores[index]] = optimized_subnets[index]
-            else:
-                top_10_subnetworks[str(sel_scores[index])+'_'+str(duplicate)] = optimized_subnets[index]
-                duplicate += 1
-    print(len(top_10_subnetworks))
-    print(top_10_subnetworks)
+            top_10_subnetworks[str(sel_scores[index]) + '_' + str(extra)] = optimized_subnets[index]
+            extra += 1
     vis_sub_list = []
-    for key in top_10_subnetworks:
-        subnetwork = top_10_subnetworks[key]
-        vis_subnetwork = conngenes(subnetwork, gene_interactions_dict)
-        vis_sub_list.append(vis_subnetwork)
-
-
-
+    for key in sorted(top_10_subnetworks.keys(), reverse=True):
+        if len(vis_sub_list) < 11:
+            subnetwork = top_10_subnetworks[key]
+            vis_subnetwork = conngenes(subnetwork, gene_interactions_dict)
+            vis_sub_list.append(vis_subnetwork)
+    subnet_num = 1
+    for conn_subnet_dict in vis_sub_list:
+        filename = "Network_"+str(subnet_num)+"_p-val.sif"
+        subnetfile = open(filename, 'w+')
+        for each_key in conn_subnet_dict:
+            if len(conn_subnet_dict[each_key]) > 0:
+                list_conn_genes = conn_subnet_dict[each_key]
+                for conn_gene in list_conn_genes:
+                    if each_key in gene_interactions_dict:
+                        full_conn_dict = gene_interactions_dict[each_key]
+                        weight = full_conn_dict[conn_gene]
+                        row = each_key + '\t' + conn_gene + '\t' + weight + '\n'
+                        subnetfile.write(row)
+        subnetfile.close()
+        subnet_num += 1
 
 '''
 function to call everything only output is the three files that are created 
 '''
 # TODO
-def OptimizedGeneNetworks (file1, file2):
+def OptimizeGeneNetworks(gmtfile, stringfile, popsize, n_bins, n_pops):
+    #OptimizeGeneNetworks(args.gmt, args.sbd, args.ps, args.nb, args.np)
     return None
 
 
@@ -417,22 +457,34 @@ gene_interaction_dict = dict_gene_interactions(STRING_filepath)                 
 empty_genescore_dict = gene_score_dict(loci_gene_dict)
 bingene_genebin = bingene_genebin_dict(gene_interaction_dict, 128)                                  #used
 FA_popsubnets = n_FA_subnets(5000, loci_gene_dict)                                                  #used
-optimized_subnets = GA_mating(FA_popsubnets, gene_interaction_dict, loci_gene_dict,
-            "C:\\Users\\ascol\\OneDrive\\Desktop\\7711\\Module4Day3\\GeneticAlgorithmStats.txt")    #used but not done
-#mean_pops = pop_subnet_noninf(optimized_subnets, 1000, 128, bingene_genebin, gene_interaction_dict)
-#gene_score = gene_scores(loci_gene_dict, optimized_subnets, gene_interaction_dict, empty_genescore_dict)
-#newgmt_withscores(gmt_filepath, loci_gene_dict, gene_score, 'Day3_Output.gmt')
-subnetwork_vis(optimized_subnets, gene_interaction_dict)
-t2 = time.time()
 
+
+#optimized_subnets = GA_mating(FA_popsubnets, gene_interaction_dict, loci_gene_dic)   #used but not done
+#mean_pops = pop_subnet_noninf(optimized_subnets, 1000, 128, bingene_genebin, gene_interaction_dict)
+
+
+#gene_score = gene_scores(loci_gene_dict, optimized_subnets, gene_interaction_dict, empty_genescore_dict)
+#newgmt_withscores(gmt_filepath, loci_gene_dict, gene_score)
+
+#subnetwork_vis(optimized_subnets, gene_interaction_dict)
+
+
+t2 = time.time()
 #takes about 68 - 70 seconds to create the new .gmt file
 #genetic algorithm takes about 25 seconds with the plots
-
-
-
+#takes about 15-17 seconds to get the 10 sif files
 print('runtime', t2-t1)
 
 
+# TODO
+# write p-val function
+# put p-val in network file names
+# write final function
+
+# write README
+# write pseudocode and comment code at the same time
+# write written report
+# visualize files in cytoscape
 
 
 
