@@ -15,7 +15,7 @@ is that each gene is given a score.
 ### Arguments 
 
 Here is a list of required and optional arguments that can be accessed by 
-typing **python "GeneScoring.py" -h**: 
+typing **python "OptimizeGeneNetworks.py" -h**: 
 
 ```text
 usage: OptimizeGeneNetworks.py [-h] [--gmt GMT] [--sdb SDB] [--ps PS] [--nb NB] [--np NP]
@@ -85,7 +85,6 @@ appear in the current working directory.
 
 To run this program interactively type: 
 
-
 ```python
 OptimizeGeneNetworks("Input.gmt.txt", "STRING.txt", 5000, 128, 1000)
 ```
@@ -152,6 +151,8 @@ Example of genetic algorithm histogram:
 
 ![Image of histogram example](https://github.com/acolorado1/Module4Day3/blob/1e1a56674ce582d4363ac421c76a7e70b3b92dcf/Module4Day3_hist_example.png)
 
+Note: If script is run through the command line these histograms will not appear. 
+
 ### Visualization 
 Visualization was done in Cytoscape. Note, when importing the network into Cytoscape as it is a text file one will have
 to click Selct Network, then click column 1 and select source node, then click column 2 and select target node, and 
@@ -159,7 +160,7 @@ click column 3 and select edge attribute.
 
 The following is the visualization of the example network text file: 
 
-![Image of subnetwork example]()
+![Image of subnetwork example](https://github.com/acolorado1/Module4Day3/blob/545e3f6db9c289c043c2c1a3f4e3134df4aaa064/Day3_Output_Network1_pvalue0.0.PNG)
 
 ## Installation and Dependencies
 You must have Python 3 installed. Any Python 3 version should work but it was written in Python 3.9 using a Windows-based 

@@ -1,0 +1,418 @@
+Author: Angela Sofia Burkhart Colorado
+Date: November 17th, 2021
+Purpose: Writes three types of files: one contains summary statistics from each generation of the genetic algorithm, one
+outputs a new .gmt file with a score for each gene, and one is a network text file of a network that can be visualized in
+Cytoscape. In addition, each generation of the genetic algorithm plots a histogram of score frequencies. The overall
+purpose of this script is to create highly associated networks of disease associated genes that are significantly more
+connected than those created from genes that are not disease associated.
+
+Import specified packages
+
+
+Add the following arguments to the parser
+1. --gmt parameter that takes loci and genes at loci file path as a string
+2. --sdb parameter that takes string database file path as a string
+3. --ps parameter is population size as an integer
+4. --nb parameter is the number of bins as an integer
+5. --np parameter is the number of populations as an integer
+
+
+Choose seed
+
+
+Takes .gmt formatted file and creates a dictionary of loci and the genes found in them.
+
+@param gmt_file: .gmt formatted file path as string
+@returns: dictionary of loci (keys) and list of genes (values)
+define dict_loci function with input gmt_file
+    open file
+    loci_gene_dict -> make empty dict
+    make loci counter variable
+    for every line in the file
+        take line convert to list and take everything but the first two indecies
+        put list as value in dict and loci counter as key
+        add to counter
+    return dictionary of loci (keys) and list of genes at each loci (values)
+
+
+Takes STRING database file creates dictionaries of genes and the genes that they interact with.
+
+@param string_file: STRING database text file path as string
+@returns: dictionary of genes (keys) and dictionary (values) of interacting genes (keys) and integers of their
+        interaction strength (values)
+define dict_gene_interactions that takes parameter sting_file
+    open file
+    gene_interaction_dict -> initialize dict of dicts genes and connected genes
+    connected_gene_weight -> initialize dict of genes and the weight of their interaction
+    for every line in the file
+        if the first item in the line is not a key in the gene_interactions dict
+            reinitialize connected_gene_weight dict
+        take second and third items from the line and append to connected_gene_weight
+        append connected_gene_weight to connected_gene_weight with key as first item in line
+    return gene_interaction_dict
+
+
+Initializes an empty dictionary of each gene in the .gmt file to add gene scores to
+
+@param loci_gene_dict: dictionary of loci (keys) and list of genes (values)
+@returns: Dictionary of genes (keys) and empty lists (values)
+define gene_score_dict that takes parameter loci_gene_dict)
+    gene_score_dict -> initialize empty dict
+    every loci in loci_gene_dict
+        for every gene in the loci
+            add gene as key and 0 as value
+    return gene_score_dict
+
+
+Takes a subnetwork and finds all edges within the subnetwork
+
+@param subnet: one list of length 12
+@param gene_interactions_dict: dictionary of dictionaries where genes are keys and values are dictionaries of genes and
+            the weight of their interactions
+@returns:returns a dictionary of genes (keys) and list of genes they are connected to within the network (value)
+define conngenes with parameters subnet and gene_interactions_dict
+    subnet_conn_dict -> initialize empty dict
+    for every gene in subnet parameter
+        if the gene is a key in gene_interactions_dict
+            take dictionary of genes connected to gene
+            conn_list -> initialize empty list
+            for every other gene in the parameter subnet
+                if every other gene is in the dictionary of connected genes
+                    append gene to list of connected genes
+        else
+            conn_list -> initialized as list containing string NA
+        add gene as key to subnet_conn_dict and the list of connected genes as values
+    return subnet_conn_dict
+
+
+Calculates the density of a network meaning that it counts the sum of all the edge weights.
+
+@param subnet_conn_dict: a dictionary of genes (keys) and list of connected genes in a subnetwork (values)
+@param gene_interactions_dict: dictionary of all genes and the genes they have a relationship with
+@returns: integer of density
+define density frunction that takes parameters subnet_conn_dict and gene_interactions_dict
+    density -> variable initialized as 0
+    for all key in the parameter subnet_conn_dict
+        if the length of the value is not equal to zero
+            for every gene in the list value
+                if the gene is a key in the parameter gene_interactions_dict
+                    Take dictionary value of gene key in gene_interactions_dict
+                    use gene as key and get weight value
+                    add weight value to density variable
+    return density variable
+
+
+Selection scores calculated the selection score or edge density of every subnetwork
+
+@param FA_popsubnets: list of lists each containing a subnetwork
+@param gene_interactions_dict: dictionary of all genes and their connected genes with the weight of their interactions
+@returns: a list of selection scores
+define selection_scores that takes parameters FA_popsubnets and gene_interactions_dict
+    density_list -> initialized as an empty list
+    for every subnet in the list FA_popsubnets
+        calculate the density of every subnet
+        use conngenes function to find the connected genes
+        use the density function to get the edge density of each subnetwork
+        append density to density_list
+    round all densities to the second decimal place
+    return density_list
+
+
+Priority list creates a list of integers assigned to each selection score repeated proportional to the value of the
+selection score.
+
+@param density_list: a list of integers
+@returns: a list of integers assigned to each score
+define priority_list that takes parameter density_list
+    # p_list -> initialize empty list
+    # for every number between 0 and the length of the parameter density_list
+        # sel_score -> calculate a score for each index in the list by taking the number at the index and multiplying
+            it by 100
+        # for every score calculated append a list of the index number repeated sel_score times to the list p_list
+    # return p_list
+
+
+Generates two dictionaries, one of bins and the genes within that bin and one of each gene and the bin they're found in.
+
+@param gene_interaction_dict: dictionary of dictionaries where genes in string database are keys and the genes they
+        interact with and the strength of the interaction are values.
+@param n_bins: number of bins to create
+@returns: tuple where first value is a dictionary of bins (keys) and list of genes (values) and second value is a
+        dictionary of genes (keys) and their bin (values)
+define bingene_genebin_dict that takes parameters gene_interaction_dict and n_bins
+    num_connactions_dict -> initialize empty dictionary
+    for every key in the parameter gene_interaction_dict
+        get the length of the value and append to a new dictionary as a value with the same key
+    sort the dict by value which creates a list of tuples
+    gene_bin_dict -> initialize empty dict that will have genes as keys and bin number as values
+    bin_genesinbin_dict -> initialize empty dict that will have bins as key and list of genes in bin as values
+    for every bin from 0 to the parameter n_bins
+        list_of_genes -> initialize empty list
+        if it is not the last bin (i.e. equal to n_bins)
+            new_list_gene_degree_pairs -> is the indexed list gene and length pairs in steps of the length of dictionary
+                                    divided by n_bins
+        else
+            for the last bin take the remainder and index list of key, length pairs
+        for every pair in the sorted dictionary
+            append genes as keys and bin as values
+            append gene value to list_of_genes list
+        append list as value to dictionary of bin keys
+    # returns a tuple of two dictionaries: bin_genesinbin_dict, gene_bin_dict
+
+
+Creates a list of lists with 12 strings (one gene from each FA loci) in each list n times.
+
+@param n_sub: number of subnetworks to be creates (default 5000)
+@param loci_gene_dict: dictionary of loci (keys) and list of genes (values)
+@returns: list of n_sub lists containing gene names (subnetworks)
+define n_FA_subnets that takes parameters n_sub and loci_gene_dict
+    FAsubnet_list -> initialize empty list
+    for nomber from 0 to parameter n_sub
+        FAsubnet -> initialize empty list
+        for each loci key in parameter loci_gene_dict
+            randomly pick a gene from the list
+            append gene to a FAsubnet
+        append FAsubnet to FAsubnet_list
+    return FAsubnet_list
+
+
+Perform mutation portion of the genetic algorithm wherein 5% of the genes at L loci are changed to a different gene at
+the loci.
+
+@param FA_popsubnet: one subnet list of length 12
+@param loci_gene_dict: dictionary of loci (keys) and list of genes (values)
+@returns: mutated subnetwork list
+define GA_mutate that takes parameters FA_popsubnet and loci_gene_dict
+    # for every index from 0 to the length of the subnetwork
+    for loci in range(len(FA_popsubnet)):
+        # if the number between 0 and 100 is less than 5 (meaning a 5% chance)
+        if random.randint(0,100) < 5:
+            # pick another gene at that loci and replace it in the subnet at that index
+            FA_popsubnet[loci] = random.choice(loci_gene_dict[loci])
+    # return the mutated subnet
+    return FA_popsubnet
+
+
+Performs mating portions of the genetic algorithm where each subnetwork in the population of networks is optimized to
+create more connected subnetworks, this will also return a GA algorithm statistics text file.
+
+@param FA_popsubnets: list of 5000 subnetworks generated by picking genes from the FA loci
+@param gene_interaction_dict: dictionary of dictionaries where each gene (key) has value of related genes and the weight
+            of their interaction
+@param loci_gene_dict: dictionary of loci (keys) and list of genes at loci (values)
+@param GAstatsfilepath: string of file path where GA stats file will be written to
+@returns: optimized subnets (list of 5000 FA associated subnetworks), writes a file with GA stats and outputs histograms
+        of the score distributions.
+define GA_mating that takes parameters FA_popsubnets, gene_interaction_dict and loci_gene_dict
+    gen -> initialize variable equal to 0
+    mean_density -> initialize variable equal to 0
+    new_density -> initialize variable equal to 0
+    GA_stats -> initialize empty dictionary
+    while the new_density is greater than or equal to a 5% increase from the previous mean_denisty
+        gen_stats -> initialize empty list
+        if the new_density is not equal to 0 (in other words if it is not generation 0)
+            make FA_popsubnets equal to the newest list of subnets
+        calculate list of selection scores using selection_scores function
+        calculate summary statistics (i.e. mean) on the list of scores and append to a gen_stats list
+        add generation number as a key and list of summary stats as value to GA_stats dictionary
+        p_list -> use priority_list function to create list where subnets with higher scores are more represented
+        optimized_subnets -> initialize empty list
+        make mean_density equal to new_density
+        for all subnetworks in FA_popsubnets parameter
+            pick second parent, those with higher scores have a higher probability of being picked
+            op_subnet -> initialize list
+            for every index in parent1 subnetwork list
+                chosengene -> randomly pick either the gene from parent1 or parent2 at that index
+                append chosen gene to op_subnet list
+            use GA mutate function to mutate list
+            append op_subnet subnetwork to optimized subnet list
+        plot histogram of the distribution of scores in current subnetworks in current generation
+        calculate recalculate new_density by taking the mean of the new generation selection scores
+        add 1 to gen variable
+
+    write file containing summmary stats of each generations selection score distribution
+    for every loci in the stats dictionary
+        write four rows containing the generation number, the mean score, the standard deviation, and variance
+
+    return list of subnetworks that are optimized_subnets
+
+
+pop_subnet_noninf creates a population of subnetworks of length n_trials out of noninformative loci in other words not
+FA associated loci
+
+@param optimized_subnets: list population of networks generated using FA loci
+@param pop: integer of size of population, default 1000
+@param binsize: integer default 128
+@param bingene_genebin: tuple of dictionaries where each gene has a bin and each bin has a list of genes
+@param gene_interactions_dict: dictionary of all genes in database and the genes they are related to
+@returns: list of integers wherein each mean is the mean edge density of each subnetwork
+define pop_subnet_noninf that takes parameters optimized_subnets, pop, binsize, bingene_genebin and gene_interactions_dict
+    bingene -> dictionary in first index of bingene_genebin parameter
+    genebin -> dictionary in second index of bingene_genebin parameter
+    noninf_pop -> initialize empty list
+    for every number between 0 and pop parameter
+        one_pop -> initialize empty list
+        for every subnetwork from parameter list optimized_subnets
+            one_subnet -> initialize empty list
+            for every gene in the subnetwork
+                if the gene is a key in the genebin dictionary
+                    get bin
+                else
+                    randomly pick bin
+                append randomly chosen gene from bin to one_subnet list
+            append one_subnet subnetwork to one_pop list
+        calculate mean of each population of subnetworks using selection score_function
+        append mean to noninf_pop list
+    return list of means
+
+
+p_value function provides a p-value for the population of FA subnetworks when compared to the distribution of subnetworks
+created by noninformative loci.
+
+@param FA_popsubnets: list of 5,000 FA subnetworks
+@param pop_noninfsubnets: list of populations of subnets from noninformative loci
+@param gene_interactions_dict: dictionary of genes (keys) and genes they interaction with and the strength of the
+            relationship (value)
+@param n_pops: number of populations generated by the noninformative loci
+@returns: list of p-values of length FA_popsubnets
+define p_val that takes parameters optimized_subnets, noninf_pop_mean, gene_interactions_dict and n_pops
+    count -> variable equal to 0
+    FA_mean -> calculate mean of selection scores for the optimized_subnets
+    for every average from the noninf_pop_mean list parameter
+        if the average is greater than FA_mean
+            add to count variable
+    p_val -> calculate p_val as the number of counts over the number of populations
+    return p_val
+
+
+gene_scores calculates a score for each FA associated gene which is the sum of the number of weighted edges in each
+subnetwork connected to each gene.
+
+@param loci_gene_dict: dictionary of loci (keys) and list of genes at each loci (values)
+@param optimized_subnets: list of 5000 subnetworks that were run through the genetic algorithm
+@param gene_interactions_dict: dictionary of dictionaries of genes, the genes associated with them and the weight of the
+            interaction
+@param empty_genescore_dict: empty dictionary for all FA associated genes (keys) and integer 0 as value
+@returns: dictionary of all FA associated genes (keys) and their scores (values)
+define gene_scores that takes parameters loci_gene_dict, optimized_subnets,gene_interactions_dict and empty_genescore_dict
+    for every subnetwork in list parameter optimized_subnets
+        for every index from 0 to the length of the subnetwork
+            keep_gene -> original gene at index is stored
+            for every gene in the list value at the index key in loci_gene_dict
+                place every_gene in index of subnetwork
+                find the which genes are connected using conngenes function
+                conn_list -> make a list of which genes are connected to every_gene
+                edge_count -> variable equal to 0
+                for every connected gene
+                    if the list does not contain NA
+                        calculate the edge weight of all the total edges connected to every_gene
+                        add every_gene as a key and add the weighted edges to value to empty_genescore_dict
+                    else
+                        make value of every_gene in empty_genescore_dict is NA
+            replace gene at index with original gene
+    for every key in the empty_genescore_dict
+        if the type of the value is a float
+            round to 2 decimal points
+    return empty_genescore_dict
+
+
+newgmt_withscores takes the format of the old gmt file and adds gene scores to each gene.
+
+@param gmtfile: the file path to the Input.gmt file
+@param loci_gene_dict: dictionary of loci (keys) and list of genes at that loci (values)
+@param gene_scores: dictionary of all FA associated genes and their scores (NA if not found in the STRING database)
+@param newgmtfile: file path of the updated .gmt file that will be written in the current working directory
+@returns: Nothing, but outputs a file
+define newgmt_withscores that takes parameters gmtfile, loci_gene_dict and gene_score
+    open .gmt file
+    locusname_description -> initialize empty dictionary
+    loci -> initialize variable equal to 0
+    for each row in file
+        convert line into list
+        append fist two elements of list into dictionary as value to loci key
+        add 1 to loci variable
+    open new file to write in
+    for every key in loci_gene_dict parameter
+        gene_list -> initialize empty list
+        for every gene in list of genes at loci
+            add to gene_list string of genes and scores
+        make row string with index value of locusname_description and list of genes and scores
+        if it is not the first row
+            add newline to row
+        write row into file
+
+
+subnetwrok_vis creates 10 sif files of the top 10 highest scoring subnetworks after the genetic algorithm has run.
+
+@param optimized_subnets: a list of 5000 FA associated subnetworks
+@param gene_interactions_dict: a dictionary of genes (keys) with dictionary values of connected genes and the weight of
+            their interaction
+@returns: nothing but writes 10 .sif files
+define subnetwork_vis that takes parameters optimized_subnets, gene_interactions_dict and n_pops, mean_pops
+    calculate p-value using p_val function
+    sel_scores -> calculate selection scores of optimized_subnets using selection_score function
+    sort scores and get the top 10 highest
+    top_10_subnetworks -> initialize empty dictionary
+    extra -> initialize variable equal to 0
+    for index from 0 to the length of the selection scores list
+        if the score is in the top 10 scores list
+            appends score_extra (so each score is unique) as a key and subnetwork with the score as value to top_10_subnetworks
+            adds one to extra variable
+    vis_sub_list -> initialize empty list
+    for all keys in sorted list of keys representing gene scores in descending order
+        if the length of the list is less than 11 (since we only want top 10)
+            find all connections between genes in the network using conngenes function
+            vis_subnetwork -> gets dictionary of connected genes using conngenes function
+            append vis_subnetwork to vis_sub_list
+    subnet_num -> variable equal to 1
+    for all dicts in the vis_sub_list
+        create file to write in
+        for each key in the dictionary of connected genes in one network
+            if the length of the value is greater than 0
+                list_conn_genes -> get list of connected genes
+                for each gene that is connected
+                    if it is in string database
+                        get weight of connection
+                        write row with each_key, conn_gene, and weight are tab separated
+                    else:
+                        make row equal to each_key
+                    write row into file
+            else:
+                make row equal to each_key
+                write row into file
+        add to subnet_num variable
+        add 1 to subnet_num variable
+
+
+OptimizeGeneNetworks calls all functions in script to produce three types of files. One with summary statstics of the
+genetic algorithm, one of an updated .gmt file with gene scores, and 10 of which are txt files with nodes and edge
+attributed for visualization in cytoscape. Furthermore if run interactively hisograms of selection scores in generation
+will be plotted.
+
+@param gmtfile: .gmt formatted file path (string)
+@param stringfile: STRING database file path (string)
+@param popsize: number of the size of subnetwork populations
+@param n_bin: number of bins that the genes should be sorted into
+@param n_pops: number of population generated with noninformative loci
+@returns: nothing but the files and the plotted histograms
+'''
+define OptimizeGeneNetworks that takes parameters gmtfile, stringfile, popsize, n_bins and n_pops
+    create dictionary of loci and genes at each loci
+    create dictionary of dictionaries containing genes and dictionary of their connected genes and the weight of the
+          interaction
+    create an empty dictionary where all FA associated genes are keys and value is 0
+    create a tuple with two dictionaries containing genes and bins and bins and the genes in the bins
+
+    create randomly picked subnetworks of genes associated with FA loci
+    optimize FA_subnets using genetic algorithm (this will output genetic algorithm stats files and histograms)
+
+    calculate the average edge density of each noninformative population of subnetworks
+    create files with subnetworks using subnetwork_vis function
+
+    calculate gene scores for all FA associated genes
+    write new .gmt formatted file with gene scores
+
+
+call OptimizedGeneNetworks with parser arguments
+
+
